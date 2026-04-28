@@ -10,6 +10,9 @@ git_commit = {cmd = "git commit -m {{message}}", args = ["message"]}
 git_push = "git push"
 git_sync = { depends-on = ["git_add", { task = "git_commit", args = ["\"{{message}}\""] }, "git_push"], args = ["message"] }
 
+[activation.env]
+OPENROUTER_API_KEY=""
+
 [dependencies]
 python = ">=3.14.4,<3.15"
 ipykernel = ">=7.2.0,<8"
@@ -17,3 +20,4 @@ ipykernel = ">=7.2.0,<8"
 [pypi-dependencies]
 pandas = ">=3.0.2, <4"
 datasets = ">=4.8.4, <5"
+openai = ">=2.33.0, <3"

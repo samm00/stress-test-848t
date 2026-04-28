@@ -4,15 +4,17 @@ import pandas as pd
 from openai import OpenAI
 
 MODELS = {
+    # 'gpt-oss': "openai/gpt-oss-120b:free",
+    # 'hy3': 'tencent/hy3-preview:free',
     "gpt-4o": "openai/gpt-4o",
     "claude-sonnet": "anthropic/claude-sonnet-4-6",
-    "gemini-flash": "google/gemini-2.5-flash-preview",
+    "gemini-flash": "google/gemini-3-flash-preview",
     "llama-70b": "meta-llama/llama-3.3-70b-instruct",
 }
 
 DIRECTIONS = {
-    "eng_to_trg": ("eng", "trg", "Translate the following English text to Jewish Neo-Aramaic (Urmi dialect). Output only the translation, no explanation.\n\n{text}"),
-    "trg_to_eng": ("trg", "eng", "Translate the following Jewish Neo-Aramaic (Urmi dialect) text to English. Output only the translation, no explanation.\n\n{text}"),
+    "eng_to_trg": ("eng", "trg", "Translate the following English text to Lishan Didan (Jewish Neo-Aramaic, Urmi dialect). Output only the translation, no explanation. Use romanization.\n\n{text}"),
+    "trg_to_eng": ("trg", "eng", "Translate the following Lishan Didan (Jewish Neo-Aramaic, Urmi dialect) text to English. Output only the translation, no explanation.\n\n{text}"),
 }
 
 
@@ -31,15 +33,15 @@ def run_model(client: OpenAI, model_id: str, system: str, user: str) -> str:
             {"role": "user", "content": user},
         ],
     )
-    return response.choices[0].message.content.strip()
+    return response.choices[0].message.content
 
 
 def run_benchmark(dataset_path: str, grammar_path: str, directions: list[str], output_path: str):
     grammar_book = open(grammar_path).read()
     system_prompt = (
         "You are a translator specializing in the Jewish Neo-Aramaic dialect of Urmi. "
-        "Use the following grammar reference to inform your translations.\n\n"
-        f"{grammar_book}"
+        #"Use the following grammar reference to inform your translations.\n\n"
+        #f"{grammar_book}"
     )
 
     df = pd.read_csv(dataset_path)
@@ -72,7 +74,7 @@ def main():
 
     parser = argparse.ArgumentParser(description="Benchmark LLMs on Urmi Neo-Aramaic translation")
     parser.add_argument("--dataset", default="data_synced/flores_translated.csv")
-    parser.add_argument("--grammar", default="data_synced/grammar_book.txt", help="Plain text grammar book")
+    parser.add_argument("--grammar", default="data_synced/grammar_book_lexicon.txt", help="Plain text grammar book")
     parser.add_argument("--directions", nargs="+", choices=list(DIRECTIONS), default=list(DIRECTIONS))
     parser.add_argument("--models", nargs="+", choices=list(MODELS), default=list(MODELS))
     parser.add_argument("--output", default="results.csv")
