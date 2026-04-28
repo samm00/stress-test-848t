@@ -8,7 +8,7 @@ version = "0.1.0"
 git_add = "git add --all"
 git_commit = {cmd = "git commit -m {{message}}", args = ["message"]}
 git_push = "git push"
-git_sync = { depends-on = ["git_add", { task = "git_commit", args = ["message"] }, "git_push"], args = ["message"] }
+git_sync = { depends-on = ["git_add", { task = "git_commit", args = ["message"] }, "git_push"]}
 
 [dependencies]
 python = ">=3.14.4,<3.15"
