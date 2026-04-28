@@ -40,8 +40,8 @@ def run_benchmark(dataset_path: str, grammar_path: str, directions: list[str], o
     grammar_book = open(grammar_path).read()
     system_prompt = (
         "You are a translator specializing in the Jewish Neo-Aramaic dialect of Urmi. "
-        #"Use the following grammar reference to inform your translations.\n\n"
-        #f"{grammar_book}"
+        "Use the following grammar reference to inform your translations.\n\n"
+        f"{grammar_book}"
     )
 
     df = pd.read_csv(dataset_path)
