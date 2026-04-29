@@ -57,27 +57,31 @@ def run_model(client: OpenAI, model_id: str, system: str, user: str) -> str:
     return response.choices[0].message.content
 
 
-def run_benchmark(dataset_path: str, examples_path: str, max_examples: int | None, directions: list[str], output_path: str):
-    system_prompt = build_system_prompt(examples_path, max_examples)
+def run_benchmark(dataset_path: str, examples_path: str, max_examples_list: list[int | None], directions: list[str], output_path: str):
     df = pd.read_csv(dataset_path)
     client = OpenAI(base_url=OPENROUTER_BASE, api_key=get_api_key())
     results = []
 
-    for direction in directions:
-        src_col, ref_col, user_template = DIRECTIONS[direction]
-        for _, row in df.iterrows():
-            source = row[src_col]
-            reference = row[ref_col]
-            for model_name, model_id in MODELS.items():
-                print(f"  [{direction}] {model_name}: {source[:60]}...")
-                output = run_model(client, model_id, system_prompt, user_template.format(text=source))
-                results.append({
-                    "direction": direction,
-                    "model": model_name,
-                    "source": source,
-                    "reference": reference,
-                    "output": output,
-                })
+    for max_examples in max_examples_list:
+        label = max_examples or "all"
+        print(f"\n--- max_examples={label} ---")
+        system_prompt = build_system_prompt(examples_path, max_examples)
+        for direction in directions:
+            src_col, ref_col, user_template = DIRECTIONS[direction]
+            for _, row in df.iterrows():
+                source = row[src_col]
+                reference = row[ref_col]
+                for model_name, model_id in MODELS.items():
+                    print(f"  [{direction}] {model_name}: {source[:60]}...")
+                    output = run_model(client, model_id, system_prompt, user_template.format(text=source))
+                    results.append({
+                        "max_examples": label,
+                        "direction": direction,
+                        "model": model_name,
+                        "source": source,
+                        "reference": reference,
+                        "output": output,
+                    })
 
     pd.DataFrame(results).to_csv(output_path, index=False)
     print(f"\nResults saved to {output_path}")
@@ -97,33 +101,39 @@ async def run_model_async(client: AsyncOpenAI, sem: asyncio.Semaphore, model_id:
         return response.choices[0].message.content
 
 
-async def run_benchmark_async(dataset_path: str, examples_path: str, max_examples: int | None, directions: list[str], output_path: str, concurrency: int):
-    system_prompt = build_system_prompt(examples_path, max_examples)
+async def run_benchmark_async(dataset_path: str, examples_path: str, max_examples_list: list[int | None], directions: list[str], output_path: str, concurrency: int):
     df = pd.read_csv(dataset_path)
     client = AsyncOpenAI(base_url=OPENROUTER_BASE, api_key=get_api_key())
     sem = asyncio.Semaphore(concurrency)
+    all_results = []
 
-    tasks, metadata = [], []
-    for direction in directions:
-        src_col, ref_col, user_template = DIRECTIONS[direction]
-        for _, row in df.iterrows():
-            source = row[src_col]
-            reference = row[ref_col]
-            for model_name, model_id in MODELS.items():
-                user_msg = user_template.format(text=source)
-                tasks.append(run_model_async(client, sem, model_id, system_prompt, user_msg))
-                metadata.append({
-                    "direction": direction,
-                    "model": model_name,
-                    "source": source,
-                    "reference": reference,
-                })
+    for max_examples in max_examples_list:
+        label = max_examples or "all"
+        print(f"\n--- max_examples={label} ---")
+        system_prompt = build_system_prompt(examples_path, max_examples)
 
-    print(f"  Dispatching {len(tasks)} requests (concurrency={concurrency})...")
-    outputs = await asyncio.gather(*tasks)
+        tasks, metadata = [], []
+        for direction in directions:
+            src_col, ref_col, user_template = DIRECTIONS[direction]
+            for _, row in df.iterrows():
+                source = row[src_col]
+                reference = row[ref_col]
+                for model_name, model_id in MODELS.items():
+                    user_msg = user_template.format(text=source)
+                    tasks.append(run_model_async(client, sem, model_id, system_prompt, user_msg))
+                    metadata.append({
+                        "max_examples": label,
+                        "direction": direction,
+                        "model": model_name,
+                        "source": source,
+                        "reference": reference,
+                    })
 
-    results = [{**meta, "output": out} for meta, out in zip(metadata, outputs)]
-    pd.DataFrame(results).to_csv(output_path, index=False)
+        print(f"  Dispatching {len(tasks)} requests (concurrency={concurrency})...")
+        outputs = await asyncio.gather(*tasks)
+        all_results.extend({**meta, "output": out} for meta, out in zip(metadata, outputs))
+
+    pd.DataFrame(all_results).to_csv(output_path, index=False)
     print(f"\nResults saved to {output_path}")
 
 
@@ -135,7 +145,7 @@ def main():
     parser = argparse.ArgumentParser(description="Benchmark LLMs on Urmi Neo-Aramaic translation")
     parser.add_argument("--dataset", default="data_synced/flores_translated.csv")
     parser.add_argument("--examples", default="data_synced/grammar_examples.csv", help="Extracted parallel pairs CSV")
-    parser.add_argument("--max-examples", type=int, default=None, help="Max parallel pairs to include in prompt")
+    parser.add_argument("--max-examples", type=int, nargs="*", default=None, help="Max parallel pairs to include in prompt (multiple values run a sweep)")
     parser.add_argument("--directions", nargs="+", choices=list(DIRECTIONS), default=list(DIRECTIONS))
     parser.add_argument("--models", nargs="+", choices=list(MODELS), default=list(MODELS))
     parser.add_argument("--output", default="results.csv")
@@ -144,21 +154,23 @@ def main():
     args = parser.parse_args()
 
     MODELS = {k: v for k, v in MODELS.items() if k in args.models}
+    max_examples_list = args.max_examples if args.max_examples else [None]
 
-    print(f"Dataset:     {args.dataset}")
-    print(f"Examples:    {args.examples} (max: {args.max_examples or 'all'})")
-    print(f"Directions:  {args.directions}")
-    print(f"Models:      {list(MODELS)}")
-    print(f"Output:      {args.output}")
-    print(f"Mode:        {'async' if args.use_async else 'sync'}\n")
+    print(f"Dataset:      {args.dataset}")
+    print(f"Examples:     {args.examples}")
+    print(f"Max-examples: {[e or 'all' for e in max_examples_list]}")
+    print(f"Directions:   {args.directions}")
+    print(f"Models:       {list(MODELS)}")
+    print(f"Output:       {args.output}")
+    print(f"Mode:         {'async' if args.use_async else 'sync'}\n")
 
     if args.use_async:
         asyncio.run(run_benchmark_async(
-            args.dataset, args.examples, args.max_examples,
+            args.dataset, args.examples, max_examples_list,
             args.directions, args.output, args.concurrency,
         ))
     else:
-        run_benchmark(args.dataset, args.examples, args.max_examples, args.directions, args.output)
+        run_benchmark(args.dataset, args.examples, max_examples_list, args.directions, args.output)
 
 
 if __name__ == "__main__":
