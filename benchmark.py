@@ -74,7 +74,7 @@ def main():
 
     parser = argparse.ArgumentParser(description="Benchmark LLMs on Urmi Neo-Aramaic translation")
     parser.add_argument("--dataset", default="data_synced/flores_translated.csv")
-    parser.add_argument("--grammar", default="data_synced/grammar_book_lexicon.txt", help="Plain text grammar book")
+    parser.add_argument("--grammar", default="data_synced/grammar_lexicon.txt", help="Plain text grammar book")
     parser.add_argument("--directions", nargs="+", choices=list(DIRECTIONS), default=list(DIRECTIONS))
     parser.add_argument("--models", nargs="+", choices=list(MODELS), default=list(MODELS))
     parser.add_argument("--output", default="results.csv")
