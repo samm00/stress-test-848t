@@ -1,0 +1,5 @@
+model,n_paired,english_accuracy,lishan_didan_accuracy,accuracy_drop,consistency_rate,translation_failure_rate,translated_gain_rate
+claude-sonnet,5,100.0,60.0,40.0,60.0,40.0,0.0
+gemini-flash,5,100.0,80.0,20.0,80.0,20.0,0.0
+gpt-4o,5,80.0,20.0,60.0,40.0,60.0,0.0
+llama-70b,5,100.0,0.0,100.0,0.0,100.0,0.0
