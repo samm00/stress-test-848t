@@ -1,0 +1,9 @@
+math_language,model,n,accuracy,parse_rate,accuracy_given_parsed,mean_absolute_error,median_absolute_error,step_checks_correct,step_checks_total,step_accuracy,direction
+english,claude-sonnet,5,100.0,100.0,100.0,0.0,0.0,8,8,100.0,english
+english,gemini-flash,5,100.0,100.0,100.0,0.0,0.0,8,8,100.0,english
+english,gpt-4o,5,80.0,100.0,80.0,1000.0,0.0,7,8,87.5,english
+english,llama-70b,5,100.0,100.0,100.0,0.0,0.0,8,8,100.0,english
+lishan_didan,claude-sonnet,5,60.0,100.0,60.0,25001.2,0.0,5,8,62.5,lishan_didan
+lishan_didan,gemini-flash,5,80.0,100.0,80.0,25000.0,0.0,7,8,87.5,lishan_didan
+lishan_didan,gpt-4o,5,20.0,100.0,20.0,26011.8,14.0,4,8,50.0,lishan_didan
+lishan_didan,llama-70b,5,0.0,100.0,0.0,1081.4,32.0,3,8,37.5,lishan_didan
